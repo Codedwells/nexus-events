@@ -1,6 +1,10 @@
-import './globals.css';
-import { DM_Sans } from 'next/font/google';
 import type { Metadata, Viewport } from 'next';
+import { DM_Sans } from 'next/font/google';
+import './globals.css';
+import { SessionProvider } from '@/components/SessionProvider';
+import Navbar from '@/components/ui/navbar';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './api/auth/[...nextauth]/route';
 
 const dmSans = DM_Sans({
 	subsets: ['latin'],
@@ -35,20 +39,38 @@ export const metadata: Metadata = {
 	keywords: ['Add', 'your', 'keywords', 'here'],
 	category: 'Add your category here'
 };
+
 export const viewport: Viewport = {
 	width: 'device-width',
 	initialScale: 1,
 	maximumScale: 1
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-}>) {
+}) {
+	const session = await getServerSession(authOptions);
+
 	return (
 		<html lang="en">
-			<body className={dmSans.className}>{children}</body>
+			<body className={dmSans.className}>
+				<SessionProvider session={session}>
+					<div className="flex min-h-screen flex-col">
+						<Navbar />
+						<main className="flex-grow">{children}</main>
+						<footer className="mt-12 bg-gray-100 py-6">
+							<div className="container mx-auto px-4 text-center text-sm text-gray-600">
+								<p>
+									&copy; {new Date().getFullYear()} Nexus Events. All rights
+									reserved.
+								</p>
+							</div>
+						</footer>
+					</div>
+				</SessionProvider>
+			</body>
 		</html>
 	);
 }
