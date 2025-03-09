@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '../../../auth/[...nextauth]/route';
+import { createId } from '@paralleldrive/cuid2';
 
 // Attend an event
 export async function POST(
@@ -19,42 +20,50 @@ export async function POST(
 		const userId = session.user.id;
 
 		// Check if event exists
-		const event = await prisma.event.findUnique({
-			where: { id: eventId }
-		});
+		const events = await prisma.$queryRaw`
+      SELECT * FROM Event WHERE id = ${eventId}
+    `;
 
-		if (!event) {
+		if (!events || events.length === 0) {
 			return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 		}
 
 		// Check if user is already attending
-		const existingAttendance = await prisma.attendee.findFirst({
-			where: {
-				userId,
-				eventId
-			}
-		});
+		const existingAttendances = await prisma.$queryRaw`
+      SELECT * FROM Attendee 
+      WHERE userId = ${userId} AND eventId = ${eventId}
+    `;
 
-		if (existingAttendance) {
+		if (existingAttendances && existingAttendances.length > 0) {
 			return NextResponse.json(
 				{ error: 'Already attending this event' },
 				{ status: 400 }
 			);
 		}
 
-		// Create attendee record
-		const attendee = await prisma.attendee.create({
-			data: {
-				userId,
-				eventId
-			}
-		});
+		// Use cuid2 instead of random string
+		const attendeeId = createId();
+		const now = new Date().toISOString();
 
-		return NextResponse.json({ attendee }, { status: 201 });
+		// Create attendee record using raw SQL
+		await prisma.$executeRaw`
+      INSERT INTO Attendee (id, userId, eventId, joinedAt)
+      VALUES (${attendeeId}, ${userId}, ${eventId}, ${now})
+    `;
+
+		// Get the created record
+		const attendees = await prisma.$queryRaw`
+      SELECT a.*, u.fullName, u.email
+      FROM Attendee a
+      JOIN User u ON a.userId = u.id
+      WHERE a.id = ${attendeeId}
+    `;
+
+		return NextResponse.json(attendees[0], { status: 201 });
 	} catch (error) {
-		console.error('Error attending event:', error);
+		console.error('Failed to attend event:', error);
 		return NextResponse.json(
-			{ error: 'Error attending event' },
+			{ error: 'Failed to attend event' },
 			{ status: 500 }
 		);
 	}
@@ -75,33 +84,30 @@ export async function DELETE(
 		const eventId = params.id;
 		const userId = session.user.id;
 
-		// Check if attendance exists
-		const attendance = await prisma.attendee.findFirst({
-			where: {
-				userId,
-				eventId
-			}
-		});
+		// Check if user is attending
+		const attendances = await prisma.$queryRaw`
+      SELECT * FROM Attendee 
+      WHERE userId = ${userId} AND eventId = ${eventId}
+    `;
 
-		if (!attendance) {
+		if (!attendances || attendances.length === 0) {
 			return NextResponse.json(
 				{ error: 'Not attending this event' },
 				{ status: 404 }
 			);
 		}
 
-		// Delete attendance
-		await prisma.attendee.delete({
-			where: {
-				id: attendance.id
-			}
-		});
+		// Remove attendance record
+		await prisma.$executeRaw`
+      DELETE FROM Attendee 
+      WHERE userId = ${userId} AND eventId = ${eventId}
+    `;
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
-		console.error('Error cancelling attendance:', error);
+		console.error('Failed to cancel attendance:', error);
 		return NextResponse.json(
-			{ error: 'Error cancelling attendance' },
+			{ error: 'Failed to cancel attendance' },
 			{ status: 500 }
 		);
 	}

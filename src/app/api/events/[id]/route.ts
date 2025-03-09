@@ -3,44 +3,60 @@ import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '../../auth/[...nextauth]/route';
 
-// Get a single event by id
 export async function GET(
 	request: Request,
 	{ params }: { params: { id: string } }
 ) {
 	try {
-		const event = await prisma.event.findUnique({
-			where: { id: params.id },
-			include: {
-				category: true,
-				organizer: {
-					select: { id: true, fullName: true, email: true }
-				},
-				attendees: {
-					include: {
-						user: {
-							select: { id: true, fullName: true, email: true }
-						}
-					}
-				}
-			}
-		});
+		const id = params.id;
 
-		if (!event) {
+		// Using raw SQL to fetch event with details including creator's name and email
+		const events = await prisma.$queryRaw`
+      SELECT 
+        e.id, e.title, e.description, e.dateTime, e.venue, e.organizerId, e.categoryId, e.createdAt,
+        u.fullName as organizerName,
+        u.email as organizerEmail,
+        c.name as categoryName,
+        (SELECT COUNT(*) FROM Attendee a WHERE a.eventId = e.id) as attendeeCount
+      FROM Event e
+      JOIN User u ON e.organizerId = u.id
+      JOIN Category c ON e.categoryId = c.id
+      WHERE e.id = ${id}
+    `;
+
+		if (!events || events.length === 0) {
 			return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 		}
 
-		return NextResponse.json({ event });
+		// Get attendees for this event
+		const attendees = await prisma.$queryRaw`
+      SELECT 
+        a.id, a.joinedAt, 
+        u.id as userId, u.fullName, u.email
+      FROM Attendee a
+      JOIN User u ON a.userId = u.id
+      WHERE a.eventId = ${id}
+      ORDER BY a.joinedAt DESC
+    `;
+
+		const event = events[0];
+
+		// Convert BigInt values to regular numbers before JSON serialization
+		const serializedEvent = {
+			...event,
+			attendeeCount: Number(event.attendeeCount)
+		};
+
+		return NextResponse.json({ ...serializedEvent, attendees });
 	} catch (error) {
-		console.error('Error fetching event:', error);
+		console.error('Failed to fetch event:', error);
 		return NextResponse.json(
-			{ error: 'Error fetching event' },
+			{ error: 'Failed to fetch event' },
 			{ status: 500 }
 		);
 	}
 }
 
-// Update an event
 export async function PUT(
 	request: Request,
 	{ params }: { params: { id: string } }
@@ -52,53 +68,71 @@ export async function PUT(
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const event = await prisma.event.findUnique({
-			where: { id: params.id }
-		});
-
-		if (!event) {
-			return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-		}
-
-		// Check if user is the organizer or admin
-		if (
-			event.organizerId !== session.user.id &&
-			session.user.role !== 'ADMIN'
-		) {
-			return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-		}
-
+		const id = params.id;
+		const userId = session.user.id;
 		const { title, description, dateTime, venue, categoryId } =
 			await request.json();
 
-		const updatedEvent = await prisma.event.update({
-			where: { id: params.id },
-			data: {
-				title,
-				description,
-				dateTime: new Date(dateTime),
-				venue,
-				categoryId
-			},
-			include: {
-				category: true,
-				organizer: {
-					select: { id: true, fullName: true, email: true }
-				}
-			}
-		});
+		// Validate required fields
+		if (!title || !description || !dateTime || !venue || !categoryId) {
+			return NextResponse.json(
+				{ error: 'Missing required fields' },
+				{ status: 400 }
+			);
+		}
 
-		return NextResponse.json({ event: updatedEvent });
+		// Check if event exists and belongs to the user
+		const events = await prisma.$queryRaw`
+      SELECT * FROM Event WHERE id = ${id}
+    `;
+
+		if (!events || events.length === 0) {
+			return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+		}
+
+		const event = events[0];
+
+		// Check if user is the organizer or an admin
+		if (event.organizerId !== userId && session.user.role !== 'ADMIN') {
+			return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+		}
+
+		const formattedDateTime = new Date(dateTime).toISOString();
+
+		// Update the event using raw SQL
+		await prisma.$executeRaw`
+      UPDATE Event
+      SET 
+        title = ${title},
+        description = ${description},
+        dateTime = ${formattedDateTime},
+        venue = ${venue},
+        categoryId = ${categoryId}
+      WHERE id = ${id}
+    `;
+
+		// Fetch the updated event
+		const updatedEvents = await prisma.$queryRaw`
+      SELECT 
+        e.id, e.title, e.description, e.dateTime, e.venue, e.organizerId, e.categoryId, e.createdAt,
+        u.fullName as organizerName,
+        c.name as categoryName
+      FROM Event e
+      JOIN User u ON e.organizerId = u.id
+      JOIN Category c ON e.categoryId = c.id
+      WHERE e.id = ${id}
+    `;
+
+		return NextResponse.json(updatedEvents[0]);
 	} catch (error) {
-		console.error('Error updating event:', error);
+		console.error('Failed to update event:', error);
 		return NextResponse.json(
-			{ error: 'Error updating event' },
+			{ error: 'Failed to update event' },
 			{ status: 500 }
 		);
 	}
 }
 
-// Delete an event
 export async function DELETE(
 	request: Request,
 	{ params }: { params: { id: string } }
@@ -110,31 +144,34 @@ export async function DELETE(
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const event = await prisma.event.findUnique({
-			where: { id: params.id }
-		});
+		const id = params.id;
+		const userId = session.user.id;
 
-		if (!event) {
+		// Check if event exists
+		const events = await prisma.$queryRaw`
+      SELECT * FROM Event WHERE id = ${id}
+    `;
+
+		if (!events || events.length === 0) {
 			return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 		}
 
-		// Check if user is the organizer or admin
-		if (
-			event.organizerId !== session.user.id &&
-			session.user.role !== 'ADMIN'
-		) {
-			return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
+		const event = events[0];
+
+		// Check if user is the organizer or an admin
+		if (event.organizerId !== userId && session.user.role !== 'ADMIN') {
+			return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 		}
 
-		await prisma.event.delete({
-			where: { id: params.id }
-		});
+		// Delete event using raw SQL
+		// The related attendees will be automatically deleted due to onDelete: Cascade in the schema
+		await prisma.$executeRaw`DELETE FROM Event WHERE id = ${id}`;
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
-		console.error('Error deleting event:', error);
+		console.error('Failed to delete event:', error);
 		return NextResponse.json(
-			{ error: 'Error deleting event' },
+			{ error: 'Failed to delete event' },
 			{ status: 500 }
 		);
 	}

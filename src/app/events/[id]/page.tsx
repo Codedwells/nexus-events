@@ -74,13 +74,38 @@ export default function EventDetails() {
 				}
 
 				const data = await response.json();
-				setEvent(data.event);
+				console.log(data);
+
+				setEvent({
+					id: data.id,
+					title: data.title,
+					description: data.description,
+					dateTime: data.dateTime,
+					venue: data.venue,
+					category: {
+						id: data.categoryId,
+						name: data.categoryName
+					},
+					organizer: {
+						id: data.organizerId,
+						fullName: data.organizerName,
+						email: data.organizerEmail
+					},
+					attendees: data.attendees.map((attendee: any) => ({
+						id: attendee.id,
+						user: {
+							id: attendee.userId,
+							fullName: attendee.fullName,
+							email: attendee.email
+						}
+					}))
+				});
 
 				// Check if current user is attending
 				if (session?.user?.id) {
-					const isUserAttending = data.event.attendees.some(
-						(attendee: Attendee) => attendee.user.id === session.user.id
-					);
+					const isUserAttending = data.attendees?.some((attendee: Attendee) => {
+						return attendee.userId === session.user.id;
+					});
 					setAttending(isUserAttending);
 				}
 			} catch (error) {

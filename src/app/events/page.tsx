@@ -57,7 +57,7 @@ export default function Events() {
 				const response = await fetch('/api/categories');
 				if (response.ok) {
 					const data = await response.json();
-					setCategories(data.categories);
+					setCategories(data);
 				}
 			} catch (error) {
 				console.error('Error fetching categories:', error);
@@ -88,8 +88,29 @@ export default function Events() {
 
 				const response = await fetch(url);
 				if (response.ok) {
-					const data = await response.json();
-					setEvents(data.events);
+					const events = await response.json();
+
+					let parsedEvents = events.map((data: any) => {
+						return {
+							id: data.id,
+							title: data.title,
+							description: data.description,
+							dateTime: data.dateTime,
+							venue: data.venue,
+							category: {
+								id: data.categoryId,
+								name: data.categoryName
+							},
+							organizer: {
+								id: data.organizerId,
+								fullName: data.organizerName,
+								email: data.organizerEmail
+							},
+							attendees: data.attendees
+						};
+					});
+
+					setEvents(parsedEvents);
 				}
 			} catch (error) {
 				console.error('Error fetching events:', error);

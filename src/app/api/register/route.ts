@@ -1,44 +1,71 @@
-import { prisma } from '@/lib/prisma';
-import { hash } from 'bcryptjs';
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
-export async function POST(request: Request) {
+// Define types for user data
+interface UserCreationResult {
+	id: string;
+	fullName: string;
+	email: string;
+}
+
+export async function POST(request: Request): Promise<NextResponse> {
 	try {
-		const { email, password, fullName, role } = await request.json();
+		const body = await request.json();
+		const { fullName, email, password } = body;
 
 		// Check if user already exists
-		const existingUser = await prisma.user.findUnique({
-			where: { email }
-		});
+		const existingUser = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "User" WHERE email = ${email} LIMIT 1
+    `;
 
-		if (existingUser) {
+		if (existingUser.length > 0) {
 			return NextResponse.json(
-				{ error: 'User already exists' },
+				{ error: 'User with this email already exists' },
 				{ status: 400 }
 			);
 		}
 
-		// Hash password
-		const hashedPassword = await hash(password, 10);
+		// Hash the password
+		const hashedPassword = await bcrypt.hash(password, 10);
 
-		// Create user
-		const user = await prisma.user.create({
-			data: {
-				email,
-				password: hashedPassword,
-				fullName,
-				role: role || 'ATTENDEE'
+		// Create user with raw SQL that matches our schema
+		const result = await prisma.$queryRaw<UserCreationResult[]>`
+      INSERT INTO "User" (
+        id,
+        "fullName", 
+        email, 
+        password,
+        role,
+        "createdAt"
+      )
+      VALUES (
+        LOWER(HEX(RANDOMBLOB(16))), 
+        ${fullName},
+        ${email},
+        ${hashedPassword},
+        'ATTENDEE',
+        datetime('now')
+      )
+      RETURNING id, "fullName", email
+    `;
+
+		const newUser = result[0];
+
+		return NextResponse.json({
+			user: {
+				id: newUser.id,
+				fullName: newUser.fullName,
+				email: newUser.email
 			}
 		});
-
-		// Return the created user without the password
-		const { password: _, ...userWithoutPassword } = user;
-
-		return NextResponse.json({ user: userWithoutPassword }, { status: 201 });
 	} catch (error) {
-		console.error('Registration error:', error);
+		console.error('Error registering user:', error);
 		return NextResponse.json(
-			{ error: 'An error occurred during registration' },
+			{
+				error: 'An error occurred during registration',
+				details: String(error)
+			},
 			{ status: 500 }
 		);
 	}

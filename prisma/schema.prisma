@@ -8,33 +8,33 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(cuid())
-  fullName   String
-  email      String    @unique
-  password   String
-  role       Role      @default(ATTENDEE)
-  createdAt  DateTime  @default(now())
-  events     Event[]   @relation("OrganizedEvents")
-  attendees  Attendee[]
+  id        String     @id @default(cuid())
+  fullName  String
+  email     String     @unique
+  password  String
+  role      Role       @default(ATTENDEE)
+  createdAt DateTime   @default(now())
+  events    Event[]    @relation("OrganizedEvents")
+  attendees Attendee[]
 }
 
 model Event {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   title       String
   description String
   dateTime    DateTime
   venue       String
   organizerId String
   categoryId  String
-  createdAt   DateTime  @default(now())
-  organizer   User      @relation("OrganizedEvents", fields: [organizerId], references: [id], onDelete: Cascade)
-  category    Category  @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime   @default(now())
+  organizer   User       @relation("OrganizedEvents", fields: [organizerId], references: [id], onDelete: Cascade)
+  category    Category   @relation(fields: [categoryId], references: [id])
   attendees   Attendee[]
 }
 
 model Category {
-  id     String   @id @default(cuid())
-  name   String   @unique
+  id     String  @id @default(cuid())
+  name   String  @unique
   events Event[]
 }
 

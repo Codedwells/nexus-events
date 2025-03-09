@@ -121,7 +121,7 @@ export default function CreateEvent() {
 				const response = await fetch('/api/categories');
 				if (response.ok) {
 					const data = await response.json();
-					setCategories(data.categories);
+					setCategories(data);
 				}
 			} catch (error) {
 				console.error('Error fetching categories:', error);
@@ -353,7 +353,7 @@ export default function CreateEvent() {
 															</div>
 														</FormControl>
 														<SelectContent>
-															{categories.length > 0 ? (
+															{categories?.length > 0 ? (
 																categories.map((category) => (
 																	<SelectItem
 																		key={category.id}

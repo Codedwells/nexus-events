@@ -68,7 +68,7 @@ export default function CategoriesAdmin() {
 			const response = await fetch('/api/categories');
 			if (response.ok) {
 				const data = await response.json();
-				setCategories(data.categories);
+				setCategories(data);
 			}
 		} catch (error) {
 			setError('Failed to fetch categories');
@@ -96,7 +96,7 @@ export default function CategoriesAdmin() {
 				throw new Error(data.error || 'Failed to add category');
 			}
 
-			setCategories([...categories, data.category]);
+			setCategories([...categories, data]);
 			setSuccess('Category added successfully');
 			setNewCategoryName('');
 		} catch (error) {
@@ -191,7 +191,7 @@ export default function CategoriesAdmin() {
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							{categories.length > 0 ? (
+							{categories?.length > 0 ? (
 								<Table>
 									<TableHeader>
 										<TableRow>

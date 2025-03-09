@@ -54,6 +54,8 @@ export default function Dashboard() {
 				const response = await fetch('/api/users/me/events?type=organized');
 				if (response.ok) {
 					const data = await response.json();
+					console.log(data);
+
 					setOrganizedEvents(data.events);
 				}
 			} catch (error) {
@@ -82,8 +84,6 @@ export default function Dashboard() {
 			fetchAttendingEvents();
 		}
 	}, [router, session, status]);
-
-	console.log(organizedEvents);
 
 	if (status === 'loading') {
 		return (

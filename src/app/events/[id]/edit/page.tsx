@@ -74,17 +74,27 @@ export default function EditEvent() {
 				}
 
 				const data = await response.json();
-				setEvent(data.event);
+				setEvent({
+					id: data.id,
+					title: data.title,
+					description: data.description,
+					dateTime: data.dateTime,
+					venue: data.venue,
+					categoryId: data.categoryId,
+					organizer: {
+						id: data.organizerId
+					}
+				});
 
 				// Format the date for datetime-local input
-				const eventDate = new Date(data.event.dateTime);
+				const eventDate = new Date(data.dateTime);
 				const formattedDate = format(eventDate, "yyyy-MM-dd'T'HH:mm");
 
-				setTitle(data.event.title);
-				setDescription(data.event.description);
+				setTitle(data.title);
+				setDescription(data.description);
 				setDateTime(formattedDate);
-				setVenue(data.event.venue);
-				setCategoryId(data.event.category.id);
+				setVenue(data.venue);
+				setCategoryId(data.categoryId);
 			} catch (error) {
 				setError('Error loading event');
 				console.error(error);
@@ -96,7 +106,7 @@ export default function EditEvent() {
 				const response = await fetch('/api/categories');
 				if (response.ok) {
 					const data = await response.json();
-					setCategories(data.categories);
+					setCategories(data);
 				}
 			} catch (error) {
 				console.error('Error fetching categories:', error);

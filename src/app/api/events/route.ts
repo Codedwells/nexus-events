@@ -2,55 +2,41 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 import { authOptions } from '../auth/[...nextauth]/route';
+import { Prisma } from '@prisma/client';
+import { createId } from '@paralleldrive/cuid2';
 
-// Get all events
-export async function GET(request: Request) {
+export async function GET() {
 	try {
-		const { searchParams } = new URL(request.url);
-		const categoryId = searchParams.get('categoryId');
-		const search = searchParams.get('search');
+		// Using raw SQL query for fetching events with creator email
+		const events = await prisma.$queryRaw`
+      SELECT 
+        e.id, e.title, e.description, e.dateTime, e.venue, e.organizerId, e.categoryId, e.createdAt,
+        u.fullName as organizerName,
+        u.email as organizerEmail,
+        c.name as categoryName,
+        (SELECT COUNT(*) FROM Attendee a WHERE a.eventId = e.id) as attendeeCount
+      FROM Event e
+      JOIN User u ON e.organizerId = u.id
+      JOIN Category c ON e.categoryId = c.id
+      ORDER BY e.dateTime DESC
+    `;
 
-		let whereClause = {};
+		// Convert BigInt values to regular numbers before JSON serialization
+		const serializedEvents = events.map((event: any) => ({
+			...event,
+			attendeeCount: Number(event.attendeeCount)
+		}));
 
-		if (categoryId) {
-			whereClause = { ...whereClause, categoryId };
-		}
-
-		if (search) {
-			whereClause = {
-				...whereClause,
-				OR: [
-					{ title: { contains: search, mode: 'insensitive' } },
-					{ description: { contains: search, mode: 'insensitive' } }
-				]
-			};
-		}
-
-		const events = await prisma.event.findMany({
-			where: whereClause,
-			include: {
-				category: true,
-				organizer: {
-					select: { id: true, fullName: true, email: true }
-				},
-				_count: {
-					select: { attendees: true }
-				}
-			},
-			orderBy: { dateTime: 'asc' }
-		});
-
-		return NextResponse.json({ events });
+		return NextResponse.json(serializedEvents);
 	} catch (error) {
-		console.error('Error fetching events:', error);
+		console.error('Failed to fetch events:', error);
 		return NextResponse.json(
-			{ error: 'Error fetching events' },
+			{ error: 'Failed to fetch events' },
 			{ status: 500 }
 		);
 	}
 }
 
-// Create a new event
 export async function POST(request: Request) {
 	try {
 		const session = await getServerSession(authOptions);
@@ -62,28 +48,69 @@ export async function POST(request: Request) {
 		const { title, description, dateTime, venue, categoryId } =
 			await request.json();
 
-		const event = await prisma.event.create({
-			data: {
-				title,
-				description,
-				dateTime: new Date(dateTime),
-				venue,
-				categoryId,
-				organizerId: session.user.id
-			},
-			include: {
-				category: true,
-				organizer: {
-					select: { id: true, fullName: true, email: true }
-				}
-			}
-		});
+		// Validate required fields
+		if (!title || !description || !dateTime || !venue || !categoryId) {
+			return NextResponse.json(
+				{ error: 'Missing required fields' },
+				{ status: 400 }
+			);
+		}
 
-		return NextResponse.json({ event }, { status: 201 });
+		// Using raw SQL for creating an event that matches schema
+		const userId = session.user.id;
+		const formattedDateTime = new Date(dateTime).toISOString();
+		const eventId = createId(); // Use cuid2 instead of random string
+
+		await prisma.$executeRaw`
+      INSERT INTO "Event" (
+        id, 
+        title, 
+        description, 
+        "dateTime", 
+        venue, 
+        "organizerId", 
+        "categoryId", 
+        "createdAt"
+      )
+      VALUES (
+        ${eventId}, 
+        ${title}, 
+        ${description}, 
+        ${formattedDateTime}, 
+        ${venue}, 
+        ${userId}, 
+        ${categoryId}, 
+        datetime('now')
+      )
+    `;
+
+		// Fetch the created event with updated column names
+		const createdEvent = await prisma.$queryRaw`
+      SELECT 
+        e.id, 
+        e.title, 
+        e.description, 
+        e."dateTime", 
+        e.venue, 
+        e."organizerId", 
+        e."categoryId", 
+        e."createdAt",
+        u."fullName" as organizerName,
+        c.name as categoryName
+      FROM "Event" e
+      JOIN "User" u ON e."organizerId" = u.id
+      JOIN "Category" c ON e."categoryId" = c.id
+      WHERE e.id = ${eventId}
+    `;
+
+		return NextResponse.json(createdEvent[0], { status: 201 });
 	} catch (error) {
-		console.error('Error creating event:', error);
+		console.error('Failed to create event:', error);
 		return NextResponse.json(
-			{ error: 'Error creating event' },
+			{
+				error: 'Failed to create event',
+				details: String(error)
+			},
 			{ status: 500 }
 		);
 	}
