@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -47,9 +47,11 @@ interface Event {
 	attendees: Attendee[];
 }
 
-export default function EventDetails({ params }: { params: { id: string } }) {
+export default function EventDetails() {
 	const router = useRouter();
-	const { data: session, status } = useSession();
+	const params = useParams<{ id: string }>();
+
+	const { data: session } = useSession();
 
 	const [event, setEvent] = useState<Event | null>(null);
 	const [loading, setLoading] = useState(true);

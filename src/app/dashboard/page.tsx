@@ -83,6 +83,8 @@ export default function Dashboard() {
 		}
 	}, [router, session, status]);
 
+	console.log(organizedEvents);
+
 	if (status === 'loading') {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
@@ -102,7 +104,7 @@ export default function Dashboard() {
 				</TabsList>
 
 				<TabsContent value="organized">
-					<Card>
+					<Card className="border-none shadow-none">
 						<CardHeader>
 							<div className="flex items-center justify-between">
 								<CardTitle>Events You&apos;ve Organized</CardTitle>
@@ -140,7 +142,7 @@ export default function Dashboard() {
 				</TabsContent>
 
 				<TabsContent value="attending">
-					<Card>
+					<Card className="border-none shadow-none">
 						<CardHeader>
 							<div className="flex items-center justify-between">
 								<CardTitle>Events You&apos;re Attending</CardTitle>

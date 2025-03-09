@@ -1,99 +1,126 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { format } from 'date-fns';
-import { Event, Category, User } from '@prisma/client';
+import type { Event, Category } from '@prisma/client';
+import { Calendar, MapPin, Users, Clock, UserRound } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+	Card,
+	CardContent,
+	CardFooter,
+	CardHeader
+} from '@/components/ui/card';
 
 type EventWithDetails = Event & {
 	category: Category;
 	organizer: { fullName: string };
 	_count?: { attendees: number };
+	imageUrl?: string;
 };
 
 export default function EventCard({ event }: { event: EventWithDetails }) {
-	const formattedDate = format(new Date(event.dateTime), 'MMM d, yyyy');
+	const formattedDate = format(new Date(event.dateTime), 'EEE, MMM d, yyyy');
 	const formattedTime = format(new Date(event.dateTime), 'h:mm a');
 
+	// Calculate if the event is upcoming, happening today, or past
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const eventDate = new Date(event.dateTime);
+	const eventDay = new Date(eventDate);
+	eventDay.setHours(0, 0, 0, 0);
+
+	const isToday = eventDay.getTime() === today.getTime();
+	const isPast = eventDate < new Date();
+
 	return (
-		<Link href={`/events/${event.id}`}>
-			<div className="flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-200 bg-white transition-shadow hover:shadow-md">
-				<div className="flex flex-grow flex-col p-6">
-					<div className="mb-2 flex items-start justify-between">
-						<span className="inline-block rounded-md bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">
+		<Link href={`/events/${event.id}`} className="block h-full">
+			<Card className="group h-full overflow-hidden border-gray-200 transition-all duration-300 hover:translate-y-[-2px] hover:shadow-lg">
+				<div className="relative h-48 w-full overflow-hidden bg-gray-100">
+					{event.imageUrl ? (
+						<Image
+							src={'/event-placeholder.svg'}
+							alt={event.title}
+							fill
+							className="object-cover transition-transform duration-500 group-hover:scale-110"
+						/>
+					) : (
+						<Image
+							src={'/event-placeholder.svg'}
+							alt={event.title}
+							fill
+							className="object-cover transition-transform duration-500 group-hover:scale-110"
+						/>
+					)}
+
+					<div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+					{isPast ? (
+						<div className="absolute right-3 top-3 rounded-full bg-gray-800/80 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+							Past Event
+						</div>
+					) : isToday ? (
+						<div className="absolute right-3 top-3 rounded-full bg-green-500/80 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+							Today
+						</div>
+					) : (
+						<div className="absolute right-3 top-3 rounded-full bg-blue-500/80 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+							Upcoming
+						</div>
+					)}
+				</div>
+
+				<CardHeader className="p-4 pb-0">
+					<div className="mb-2 flex items-center justify-between">
+						<Badge
+							variant="secondary"
+							className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+						>
 							{event.category.name}
-						</span>
-						<div className="text-sm text-gray-500">
-							{event._count?.attendees || 0} attending
+						</Badge>
+						<div className="flex items-center text-sm text-gray-500">
+							<Users className="mr-1 h-4 w-4" />
+							<span>{event._count?.attendees || 0}</span>
 						</div>
 					</div>
+					<h3 className="line-clamp-1 text-xl font-semibold transition-colors group-hover:text-blue-600">
+						{event.title}
+					</h3>
+				</CardHeader>
 
-					<h3 className="mb-2 text-xl font-semibold">{event.title}</h3>
-
-					<p className="mb-4 line-clamp-2 flex-grow text-gray-600">
+				<CardContent className="p-4 pt-2">
+					<p className="mb-4 line-clamp-2 text-sm text-gray-600">
 						{event.description}
 					</p>
 
-					<div className="mt-auto flex flex-col text-sm text-gray-500">
-						<div className="mb-1 flex items-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								className="mr-1 h-4 w-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-								/>
-							</svg>
-							{formattedDate} at {formattedTime}
+					<div className="space-y-2 text-sm">
+						<div className="flex items-center text-gray-600">
+							<Calendar className="mr-2 h-4 w-4 flex-shrink-0 text-blue-500" />
+							<span>{formattedDate}</span>
 						</div>
-						<div className="mb-1 flex items-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								className="mr-1 h-4 w-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-								/>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-								/>
-							</svg>
-							{event.venue}
+
+						<div className="flex items-center text-gray-600">
+							<Clock className="mr-2 h-4 w-4 flex-shrink-0 text-blue-500" />
+							<span>{formattedTime}</span>
 						</div>
-						<div className="flex items-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								className="mr-1 h-4 w-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-								/>
-							</svg>
-							{event.organizer.fullName}
+
+						<div className="flex items-center text-gray-600">
+							<MapPin className="mr-2 h-4 w-4 flex-shrink-0 text-blue-500" />
+							<span className="line-clamp-1">{event.venue}</span>
 						</div>
 					</div>
-				</div>
-			</div>
+				</CardContent>
+
+				<CardFooter className="mt-auto border-t border-gray-100 p-4">
+					<div className="flex items-center text-sm">
+						<UserRound className="mr-2 h-4 w-4 text-gray-500" />
+						<span className="font-medium text-gray-700">
+							{event.organizer.fullName}
+						</span>
+					</div>
+				</CardFooter>
+			</Card>
 		</Link>
 	);
 }

@@ -22,6 +22,9 @@ export async function GET(request: Request) {
 				},
 				include: {
 					category: true,
+					organizer: {
+						select: { id: true, fullName: true }
+					},
 					_count: {
 						select: { attendees: true }
 					}

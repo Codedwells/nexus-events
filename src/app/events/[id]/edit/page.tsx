@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,9 @@ interface Event {
 	};
 }
 
-export default function EditEvent({ params }: { params: { id: string } }) {
+export default function EditEvent() {
+	const params = useParams<{ id: string }>();
+
 	const { data: session, status } = useSession();
 	const router = useRouter();
 
