@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -12,226 +12,328 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from './dropdown-menu';
-import { Calendar, Home, LogOut, Menu, UserRound } from 'lucide-react';
+import {
+	Calendar,
+	Home,
+	LogOut,
+	Menu,
+	UserRound,
+	X,
+	ChevronDown,
+	PlusCircle
+} from 'lucide-react';
 
 export default function Navbar() {
 	const { data: session } = useSession();
 	const pathname = usePathname();
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [scrolled, setScrolled] = useState(false);
+
+	// Add scroll effect
+	useEffect(() => {
+		const handleScroll = () => {
+			setScrolled(window.scrollY > 10);
+		};
+
+		window.addEventListener('scroll', handleScroll);
+		return () => window.removeEventListener('scroll', handleScroll);
+	}, []);
 
 	const isActive = (path: string) => pathname === path;
+	const isActiveOrChild = (path: string) =>
+		pathname === path || pathname?.startsWith(`${path}/`);
 
 	return (
-		<nav className="bg-white shadow-sm">
+		<nav
+			className={`sticky top-0 z-50 w-full transition-all duration-200 ${
+				scrolled ? 'border-b bg-white/95 backdrop-blur-sm' : 'bg-white'
+			}`}
+		>
 			<div className="container mx-auto px-4">
-				<div className="flex h-16 justify-between">
-					<div className="flex">
-						<div className="flex flex-shrink-0 items-center">
-							<Link href="/" className="text-xl font-bold text-blue-600">
+				<div className="flex h-16 items-center justify-between">
+					{/* Logo and Desktop Navigation */}
+					<div className="flex items-center gap-8">
+						<Link
+							href="/"
+							className="flex items-center gap-2 text-xl font-bold"
+						>
+							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-500 font-bold text-white">
+								NE
+							</div>
+							<span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
 								Nexus Events
-							</Link>
-						</div>
-						<div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+							</span>
+						</Link>
+
+						<div className="hidden md:flex md:items-center md:gap-1">
 							<Link
 								href="/"
-								className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+								className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
 									isActive('/')
-										? 'border-blue-500 text-gray-900'
-										: 'border-transparent text-gray-500 hover:border-gray-300'
+										? 'bg-blue-100 text-blue-700'
+										: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 								}`}
 							>
+								<Home className="h-4 w-4" />
 								Home
 							</Link>
+
 							<Link
 								href="/events"
-								className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
-									isActive('/events') || pathname?.startsWith('/events/')
-										? 'border-blue-500 text-gray-900'
-										: 'border-transparent text-gray-500 hover:border-gray-300'
+								className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+									isActiveOrChild('/events')
+										? 'bg-blue-100 text-blue-700'
+										: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 								}`}
 							>
+								<Calendar className="h-4 w-4" />
 								Events
 							</Link>
+
 							{session && (
 								<Link
 									href="/dashboard"
-									className={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium ${
+									className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
 										isActive('/dashboard')
-											? 'border-blue-500 text-gray-900'
-											: 'border-transparent text-gray-500 hover:border-gray-300'
+											? 'bg-blue-100 text-blue-700'
+											: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 									}`}
 								>
+									<UserRound className="h-4 w-4" />
 									Dashboard
 								</Link>
 							)}
 						</div>
 					</div>
 
-					<div className="hidden sm:ml-6 sm:flex sm:items-center">
+					{/* Desktop Auth Buttons */}
+					<div className="hidden md:flex md:items-center md:gap-3">
 						{!session ? (
-							<div className="space-x-2">
-								<Button variant="outline" asChild>
+							<>
+								<Button
+									variant="outline"
+									size="sm"
+									asChild
+									className="h-9 px-4"
+								>
 									<Link href="/auth/signin">Sign In</Link>
 								</Button>
-								<Button asChild>
+								<Button
+									size="sm"
+									asChild
+									className="h-9 bg-gradient-to-r from-blue-600 to-blue-500 px-4 hover:from-blue-700 hover:to-blue-600"
+								>
 									<Link href="/auth/signup">Sign Up</Link>
 								</Button>
-							</div>
+							</>
 						) : (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline">
-										<UserRound className="mr-2 h-4 w-4" />
-										{session.user?.name}
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent align="end">
-									<DropdownMenuItem asChild>
-										<Link href="/dashboard" className="w-full cursor-pointer">
-											<Home className="mr-2 h-4 w-4" />
-											<span>Dashboard</span>
-										</Link>
-									</DropdownMenuItem>
-									<DropdownMenuItem asChild>
-										<Link
-											href="/events/create"
-											className="w-full cursor-pointer"
+							<div className="flex items-center gap-3">
+								<Button
+									variant="outline"
+									size="sm"
+									asChild
+									className="h-9 gap-1.5 border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+								>
+									<Link href="/events/create">
+										<PlusCircle className="h-4 w-4" />
+										Create Event
+									</Link>
+								</Button>
+
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-9 gap-2 border border-gray-200 hover:bg-blue-50 hover:text-blue-600"
 										>
-											<Calendar className="mr-2 h-4 w-4" />
-											<span>Create Event</span>
-										</Link>
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem
-										onClick={() => signOut({ callbackUrl: '/' })}
-										className="cursor-pointer"
-									>
-										<LogOut className="mr-2 h-4 w-4" />
-										<span>Sign Out</span>
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
+											<div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+												{session.user?.name?.charAt(0) || 'U'}
+											</div>
+											<span className="max-w-[100px] truncate">
+												{session.user?.name}
+											</span>
+											<ChevronDown className="h-4 w-4 opacity-50" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end" className="w-56">
+										<div className="flex items-center gap-2 p-2">
+											<div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+												{session.user?.name?.charAt(0) || 'U'}
+											</div>
+											<div className="flex flex-col">
+												<p className="text-sm font-medium">
+													{session.user?.name}
+												</p>
+												<p className="truncate text-xs text-gray-500">
+													{session.user?.email}
+												</p>
+											</div>
+										</div>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem asChild>
+											<Link
+												href="/dashboard"
+												className="flex w-full cursor-pointer items-center"
+											>
+												<UserRound className="mr-2 h-4 w-4" />
+												<span>Dashboard</span>
+											</Link>
+										</DropdownMenuItem>
+										<DropdownMenuItem asChild>
+											<Link
+												href="/events/create"
+												className="flex w-full cursor-pointer items-center"
+											>
+												<Calendar className="mr-2 h-4 w-4" />
+												<span>Create Event</span>
+											</Link>
+										</DropdownMenuItem>
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											onClick={() => signOut({ callbackUrl: '/' })}
+											className="flex cursor-pointer items-center text-red-500 focus:text-red-500"
+										>
+											<LogOut className="mr-2 h-4 w-4" />
+											<span>Sign Out</span>
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
+							</div>
 						)}
 					</div>
 
-					<div className="flex items-center sm:hidden">
+					{/* Mobile Menu Button */}
+					<div className="flex items-center md:hidden">
 						<button
 							onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-							className="inline-flex items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+							className="inline-flex items-center justify-center rounded-md p-2 text-gray-500 transition-colors duration-200 hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
 						>
-							<span className="sr-only">Open main menu</span>
-							<Menu className="h-6 w-6" />
+							<span className="sr-only">Toggle menu</span>
+							{mobileMenuOpen ? (
+								<X className="h-6 w-6" />
+							) : (
+								<Menu className="h-6 w-6" />
+							)}
 						</button>
 					</div>
 				</div>
 			</div>
 
-			{/* Mobile menu, toggle visibility based on menu state */}
+			{/* Mobile Menu */}
 			{mobileMenuOpen && (
-				<div className="sm:hidden">
-					<div className="space-y-1 pb-3 pt-2">
+				<div className="duration-200 animate-in slide-in-from-top-5 md:hidden">
+					<div className="space-y-1 px-4 py-3">
 						<Link
 							href="/"
-							className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
+							className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium ${
 								isActive('/')
-									? 'border-blue-500 bg-blue-50 text-blue-700'
-									: 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+									? 'bg-blue-100 text-blue-700'
+									: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 							}`}
 							onClick={() => setMobileMenuOpen(false)}
 						>
+							<Home className="h-4 w-4" />
 							Home
 						</Link>
+
 						<Link
 							href="/events"
-							className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-								isActive('/events') || pathname?.startsWith('/events/')
-									? 'border-blue-500 bg-blue-50 text-blue-700'
-									: 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+							className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium ${
+								isActiveOrChild('/events')
+									? 'bg-blue-100 text-blue-700'
+									: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 							}`}
 							onClick={() => setMobileMenuOpen(false)}
 						>
+							<Calendar className="h-4 w-4" />
 							Events
 						</Link>
+
 						{session && (
 							<Link
 								href="/dashboard"
-								className={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
+								className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium ${
 									isActive('/dashboard')
-										? 'border-blue-500 bg-blue-50 text-blue-700'
-										: 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50'
+										? 'bg-blue-100 text-blue-700'
+										: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
 								}`}
 								onClick={() => setMobileMenuOpen(false)}
 							>
+								<UserRound className="h-4 w-4" />
 								Dashboard
 							</Link>
 						)}
 
-						{!session ? (
-							<div className="flex flex-col space-y-2 border-t border-gray-200 px-4 pb-3 pt-4">
-								<Button variant="outline" asChild className="w-full">
-									<Link
-										href="/auth/signin"
-										onClick={() => setMobileMenuOpen(false)}
-									>
-										Sign In
-									</Link>
-								</Button>
-								<Button asChild className="w-full">
-									<Link
-										href="/auth/signup"
-										onClick={() => setMobileMenuOpen(false)}
-									>
-										Sign Up
-									</Link>
-								</Button>
-							</div>
-						) : (
-							<div className="border-t border-gray-200 pb-3 pt-4">
-								<div className="flex items-center px-4">
-									<div className="flex-shrink-0">
-										<span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-200">
-											<span className="text-sm font-medium leading-none text-gray-500">
-												{session.user?.name?.charAt(0) || 'U'}
-											</span>
-										</span>
-									</div>
-									<div className="ml-3">
-										<div className="text-base font-medium text-gray-800">
-											{session.user?.name}
-										</div>
-										<div className="text-sm font-medium text-gray-500">
-											{session.user?.email}
-										</div>
-									</div>
-								</div>
-								<div className="mt-3 space-y-1 px-2">
-									<Link
-										href="/dashboard"
-										className="block rounded-md px-3 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-										onClick={() => setMobileMenuOpen(false)}
-									>
-										Dashboard
-									</Link>
-									<Link
-										href="/events/create"
-										className="block rounded-md px-3 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-										onClick={() => setMobileMenuOpen(false)}
-									>
-										Create Event
-									</Link>
-									<button
-										onClick={() => {
-											setMobileMenuOpen(false);
-											signOut({ callbackUrl: '/' });
-										}}
-										className="block w-full rounded-md px-3 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-									>
-										Sign Out
-									</button>
-								</div>
-							</div>
+						{session && (
+							<Link
+								href="/events/create"
+								className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium ${
+									isActive('/events/create')
+										? 'bg-blue-100 text-blue-700'
+										: 'text-gray-600 hover:bg-blue-50 hover:text-blue-600'
+								}`}
+								onClick={() => setMobileMenuOpen(false)}
+							>
+								<PlusCircle className="h-4 w-4" />
+								Create Event
+							</Link>
 						)}
 					</div>
+
+					{!session ? (
+						<div className="space-y-2 border-t border-gray-200 p-4">
+							<Button
+								variant="outline"
+								asChild
+								className="w-full justify-center"
+							>
+								<Link
+									href="/auth/signin"
+									onClick={() => setMobileMenuOpen(false)}
+								>
+									Sign In
+								</Link>
+							</Button>
+							<Button
+								asChild
+								className="w-full justify-center bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+							>
+								<Link
+									href="/auth/signup"
+									onClick={() => setMobileMenuOpen(false)}
+								>
+									Sign Up
+								</Link>
+							</Button>
+						</div>
+					) : (
+						<div className="border-t border-gray-200 p-4">
+							<div className="mb-4 flex items-center gap-3">
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 font-medium text-blue-700">
+									{session.user?.name?.charAt(0) || 'U'}
+								</div>
+								<div>
+									<p className="font-medium">{session.user?.name}</p>
+									<p className="truncate text-sm text-gray-500">
+										{session.user?.email}
+									</p>
+								</div>
+							</div>
+
+							<Button
+								variant="outline"
+								onClick={() => {
+									setMobileMenuOpen(false);
+									signOut({ callbackUrl: '/' });
+								}}
+								className="w-full justify-center border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600"
+							>
+								<LogOut className="mr-2 h-4 w-4" />
+								Sign Out
+							</Button>
+						</div>
+					)}
 				</div>
 			)}
 		</nav>
