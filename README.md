@@ -1,44 +1,61 @@
-# Nextjs-Starter
+# Nexus Events
 
-This is a starter template for [Learn Next.js](https://nextjs.org/learn).
+A Next.js application for event management with authentication, event creation, and attendee registration.
 
-## What's Inside?
+## Technologies
 
-This templates includes the following:
+- Next.js 15
+- React 19
+- Prisma ORM
+- SQLite Database
+- TypeScript
+- Tailwind CSS
+- NextAuth for authentication
+- Radix UI for accessible components
 
-- [NextJs 15](https://nextjs.org/)
-- [React 19](https://reactjs.org/)
-- [TypeScript 5](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Lucide React Icons](lucide.dev/icons/)
-- [ESLint](https://eslint.org/)
-- [Prettier](https://prettier.io/)
-- [ShadCn](https://ui.shadcn.com/)
-- [Zustand](https://zustand.surge.sh/)
+## Prerequisites
 
-## Getting Started
+- Node.js 18+ recommended
+- pnpm package manager
 
-Clone the repository and run the development server:
+## Installation
+
+Clone the repository and install dependencies:
 
 ```bash
-git clone git@github.com:zenetralabs/nextjs-template.git
-
-cd nextjs-template
-
+git clone https://github.com/Codedwells/nexus-events
+cd nexus-events
 pnpm install
+```
 
+## Environment Setup
+
+Create a `.env` file in the project root:
+
+```bash
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_SECRET="your-secret"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+## Database Setup
+
+Run the following Prisma commands to set up and seed the database:
+
+```bash
+pnpm prisma migrate dev --name init
+pnpm prisma db seed
+```
+**An admin will be seeded with the following credentials**
+- Email : `admin@mails.com`
+- Password : `helloadmin1`
+
+## Running the Application
+
+Start the development server:
+
+```bash
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## A few things to note
-
-- This template uses `pnpm` as the package manager.
-- This template uses `eslint` and `prettier` for code formatting.
-- This template uses `tailwindcss` for styling.
-- This template uses `lucide` for icons.
-- This template uses `typescript` for type checking. (Typescript knowledge is required!!!)
-- This template uses `nextjs 15`.Expect to fight with some breaking changes.
-- This template uses `react 19`.Expect to fight with some breaking changes.
-- We use eslint and prettier with lint-staged and husky to enforce code formatting and linting.
