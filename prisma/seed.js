@@ -28,6 +28,48 @@ async function main() {
 	} else {
 		console.log('Admin user already exists');
 	}
+
+	// Seed categories
+	await seedCategories();
+}
+
+async function seedCategories() {
+	const categories = [
+		'Technology',
+		'Business',
+		'Science',
+		'Health',
+		'Arts',
+		'Education',
+		'Entertainment',
+		'Sports',
+		'Social',
+		'Networking'
+	];
+
+	console.log('Seeding categories...');
+
+	for (const categoryName of categories) {
+		// Check if category exists before creating
+		const existingCategory = await prisma.category.findFirst({
+			where: {
+				name: categoryName
+			}
+		});
+
+		if (!existingCategory) {
+			await prisma.category.create({
+				data: {
+					name: categoryName
+				}
+			});
+			console.log(`Category created: ${categoryName}`);
+		} else {
+			console.log(`Category already exists: ${categoryName}`);
+		}
+	}
+
+	console.log('Categories seeding completed.');
 }
 
 main()

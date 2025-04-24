@@ -8,11 +8,10 @@ export async function GET() {
 	try {
 		// Using raw SQL to fetch all categories
 		const categories = await prisma.$queryRaw`
-      SELECT 
+      SELECT
         c.id, c.name,
         (SELECT COUNT(*) FROM Event e WHERE e.categoryId = c.id) as eventCount
       FROM Category c
-      ORDER BY c.name ASC
     `;
 
 		// Convert BigInt values to regular numbers before JSON serialization

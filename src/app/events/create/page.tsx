@@ -161,7 +161,7 @@ export default function CreateEvent() {
 				throw new Error(data.error || 'Failed to create event');
 			}
 
-			router.push(`/events/${data.event.id}`);
+			router.push(`/events/${data.id}`);
 		} catch (error) {
 			setError(error instanceof Error ? error.message : 'Something went wrong');
 			setIsSubmitting(false);
