@@ -13,7 +13,7 @@ import {
 	CardHeader
 } from '@/components/ui/card';
 
-type EventWithDetails = Event & {
+export type EventWithDetails = Event & {
 	category: Category;
 	organizer: { fullName: string };
 	_count?: { attendees: number };
@@ -79,10 +79,6 @@ export default function EventCard({ event }: { event: EventWithDetails }) {
 						>
 							{event.category.name}
 						</Badge>
-						<div className="flex items-center text-sm text-gray-500">
-							<Users className="mr-1 h-4 w-4" />
-							<span>{event._count?.attendees || 0}</span>
-						</div>
 					</div>
 					<h3 className="line-clamp-1 text-xl font-semibold transition-colors group-hover:text-blue-600">
 						{event.title}

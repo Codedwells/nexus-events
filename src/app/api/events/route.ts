@@ -21,6 +21,8 @@ export async function GET() {
       ORDER BY e.dateTime DESC
     `;
 
+		console.log('Fetched events:', events);
+
 		// Convert BigInt values to regular numbers before JSON serialization
 		const serializedEvents = events.map((event: any) => ({
 			...event,

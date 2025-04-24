@@ -13,7 +13,7 @@ import {
 	SelectValue
 } from '@/components/ui/select';
 import { Card, CardFooter } from '@/components/ui/card';
-import EventCard from '@/components/EventCard';
+import EventCard, { EventWithDetails } from '@/components/EventCard';
 import { Loader } from 'lucide-react';
 
 interface Category {
@@ -180,7 +180,10 @@ export default function Events() {
 					{events.length > 0 ? (
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 							{events.map((event) => (
-								<EventCard key={event.id} event={event} />
+								<EventCard
+									key={event.id}
+									event={event as unknown as EventWithDetails}
+								/>
 							))}
 						</div>
 					) : (
